@@ -1,9 +1,11 @@
 import { configureStore } from '@reduxjs/toolkit'
 
+import foldersReducer from '../features/folders/foldersSlice'
 import uiReducer from '../features/ui/uiSlice'
 
 export const store = configureStore({
   reducer: {
+    folders: foldersReducer,
     ui: uiReducer,
   },
 })

@@ -28,11 +28,12 @@ export function LoginPage() {
   return (
     <main className="auth-screen">
       <section className="auth-card">
+        <span className="brand-mark auth-brand-mark" aria-hidden="true" />
         <p className="eyebrow">PaperMind</p>
         <h1>Sign in to continue</h1>
         <p>
           Your research workspace is protected. Sign in or create an account to
-          access the dashboard, paper library, and settings.
+          access your dashboard, folders, chats, and shared paper files.
         </p>
 
         <div className="button-row">
