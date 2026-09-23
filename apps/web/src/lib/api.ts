@@ -2,10 +2,15 @@ export const apiBaseUrl =
   import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000'
 
 export type CurrentUserResponse = {
+  id: string
   clerk_user_id: string
-  session_id: string | null
-  organization_id: string | null
-  organization_role: string | null
+  email: string
+  first_name: string | null
+  last_name: string | null
+  image_url: string | null
+  is_deleted: boolean
+  created_at: string
+  updated_at: string
 }
 
 export async function fetchCurrentUser(
