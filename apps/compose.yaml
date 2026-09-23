@@ -1,0 +1,18 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    container_name: papermind-postgres
+
+    environment:
+      POSTGRES_DB: ${PAPERMIND_POSTGRES_DB:-papermind}
+      POSTGRES_USER: ${PAPERMIND_POSTGRES_USER:-papermind}
+      POSTGRES_PASSWORD: ${PAPERMIND_POSTGRES_PASSWORD:?Set PAPERMIND_POSTGRES_PASSWORD in your local env file}
+
+    ports:
+      - "5432:5432"
+
+    volumes:
+      - papermind_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  papermind_postgres_data:
