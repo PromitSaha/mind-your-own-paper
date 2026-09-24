@@ -8,6 +8,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from papermind.db.base import Base
 
 if TYPE_CHECKING:
+    from papermind.models.file import File
     from papermind.models.user import User
 
 
@@ -36,3 +37,7 @@ class Folder(Base):
     )
 
     owner: Mapped["User"] = relationship(back_populates="folders")
+    files: Mapped[list["File"]] = relationship(
+        back_populates="folder",
+        cascade="all, delete-orphan",
+    )
