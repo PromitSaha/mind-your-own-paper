@@ -1,6 +1,8 @@
 import { SignInButton, SignUpButton, useAuth } from '@clerk/react'
 import { Navigate, useLocation } from 'react-router'
 
+import { LoadingSpinner } from '../components/LoadingSpinner'
+
 type RedirectState = {
   from?: {
     pathname?: string
@@ -16,7 +18,7 @@ export function LoginPage() {
   if (!isLoaded) {
     return (
       <main className="auth-screen">
-        <p className="muted">Loading authentication...</p>
+        <LoadingSpinner label="Loading authentication..." />
       </main>
     )
   }

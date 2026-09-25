@@ -1,4 +1,4 @@
-import { useClerk, useUser } from '@clerk/react'
+import { useAuth, useClerk, useUser } from '@clerk/react'
 import type { CSSProperties, FormEvent, KeyboardEvent, PointerEvent } from 'react'
 import { useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router'
@@ -6,12 +6,19 @@ import { NavLink, Outlet, useNavigate } from 'react-router'
 import { useAppDispatch, useAppSelector } from '../../app/hooks'
 import {
   cancelCreatingFolder,
-  createFolder,
+  deleteFolder,
+  folderCreated,
+  folderFetched,
   selectFolder,
   setDraftFolderName,
   startCreatingFolder,
 } from '../../features/folders/foldersSlice'
 import { toggleSidebar } from '../../features/ui/uiSlice'
+import {
+  createFolderRequest,
+  deleteFolderRequest,
+  fetchFolderByIdRequest,
+} from '../../lib/api'
 
 const navigationItems = [
   { icon: '⌂', label: 'Dashboard', to: '/dashboard' },
@@ -32,10 +39,15 @@ export function AppLayout() {
     (state) => state.folders.draftFolderName,
   )
   const navigate = useNavigate()
+  const { getToken } = useAuth()
   const { signOut } = useClerk()
   const { user } = useUser()
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false)
   const [sidebarWidth, setSidebarWidth] = useState(220)
+  const [folderActionError, setFolderActionError] = useState<string | null>(null)
+  const [isSubmittingFolder, setIsSubmittingFolder] = useState(false)
+  const [openingFolderId, setOpeningFolderId] = useState<string | null>(null)
+  const [deletingFolderId, setDeletingFolderId] = useState<string | null>(null)
 
   const displayName =
     user?.fullName ?? user?.primaryEmailAddress?.emailAddress ?? 'User'
@@ -55,15 +67,85 @@ export function AppLayout() {
     navigate('/settings')
   }
 
-  function handleCreateFolder(event: FormEvent<HTMLFormElement>) {
+  async function handleCreateFolder(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    dispatch(createFolder())
-    navigate('/folders')
+    const folderName = draftFolderName.trim()
+    if (!folderName || isSubmittingFolder) {
+      return
+    }
+
+    setFolderActionError(null)
+    setIsSubmittingFolder(true)
+
+    try {
+      const token = await getToken()
+      if (!token) {
+        throw new Error('Clerk did not return a session token.')
+      }
+
+      const folder = await createFolderRequest(token, folderName)
+      dispatch(folderCreated({ id: folder.id, name: folder.name }))
+      navigate(`/folders/${folder.id}`)
+    } catch (error) {
+      setFolderActionError(
+        error instanceof Error ? error.message : 'Unable to create folder.',
+      )
+    } finally {
+      setIsSubmittingFolder(false)
+    }
   }
 
-  function handleSelectFolder(folderId: string) {
+  async function handleSelectFolder(folderId: string) {
+    if (openingFolderId) {
+      return
+    }
+
     dispatch(selectFolder(folderId))
-    navigate('/folders')
+    setFolderActionError(null)
+    setOpeningFolderId(folderId)
+
+    try {
+      const token = await getToken()
+      if (!token) {
+        throw new Error('Clerk did not return a session token.')
+      }
+
+      const folder = await fetchFolderByIdRequest(token, folderId)
+      dispatch(folderFetched({ id: folder.id, name: folder.name }))
+      navigate(`/folders/${folder.id}`)
+    } catch (error) {
+      setFolderActionError(
+        error instanceof Error ? error.message : 'Unable to open folder.',
+      )
+    } finally {
+      setOpeningFolderId(null)
+    }
+  }
+
+  async function handleDeleteFolder(folderId: string) {
+    if (deletingFolderId) {
+      return
+    }
+
+    setFolderActionError(null)
+    setDeletingFolderId(folderId)
+
+    try {
+      const token = await getToken()
+      if (!token) {
+        throw new Error('Clerk did not return a session token.')
+      }
+
+      await deleteFolderRequest(token, folderId)
+      dispatch(deleteFolder(folderId))
+      navigate('/dashboard')
+    } catch (error) {
+      setFolderActionError(
+        error instanceof Error ? error.message : 'Unable to delete folder.',
+      )
+    } finally {
+      setDeletingFolderId(null)
+    }
   }
 
   function handleResizeStart(event: PointerEvent<HTMLDivElement>) {
@@ -114,20 +196,18 @@ export function AppLayout() {
             item.label === 'Folders' ? (
               <div className="sidebar-folders-block" key={item.to}>
                 <div className="sidebar-folders-nav-row">
-                  <NavLink
-                    to={item.to}
-                    className={({ isActive }) =>
-                      isActive ? 'nav-link nav-link--active' : 'nav-link'
-                    }
-                  >
+                  <div className="sidebar-folders-title">
                     <span aria-hidden="true">{item.icon}</span>
                     {item.label}
-                  </NavLink>
+                  </div>
                   <button
                     type="button"
                     className="folder-create-icon-button"
                     aria-label="Create folder"
-                    onClick={() => dispatch(startCreatingFolder())}
+                    onClick={() => {
+                      setFolderActionError(null)
+                      dispatch(startCreatingFolder())
+                    }}
                   >
                     +
                   </button>
@@ -147,10 +227,16 @@ export function AppLayout() {
                       autoFocus
                     />
                     <div>
-                      <button type="submit">Create</button>
+                      <button type="submit" disabled={isSubmittingFolder}>
+                        {isSubmittingFolder ? 'Creating' : 'Create'}
+                      </button>
                       <button
                         type="button"
-                        onClick={() => dispatch(cancelCreatingFolder())}
+                        disabled={isSubmittingFolder}
+                        onClick={() => {
+                          setFolderActionError(null)
+                          dispatch(cancelCreatingFolder())
+                        }}
                       >
                         Cancel
                       </button>
@@ -158,21 +244,39 @@ export function AppLayout() {
                   </form>
                 ) : null}
 
+                {folderActionError ? (
+                  <p className="sidebar-folder-error">{folderActionError}</p>
+                ) : null}
+
                 {folders.length > 0 ? (
                   <div className="sidebar-folder-list">
                     {folders.map((folder) => (
-                      <button
+                      <div
                         key={folder.id}
-                        type="button"
                         className={
                           folder.id === selectedFolderId
-                            ? 'sidebar-folder-button sidebar-folder-button--active'
-                            : 'sidebar-folder-button'
+                            ? 'sidebar-folder-row sidebar-folder-row--active'
+                            : 'sidebar-folder-row'
                         }
-                        onClick={() => handleSelectFolder(folder.id)}
                       >
-                        {folder.name}
-                      </button>
+                        <button
+                          type="button"
+                          className="sidebar-folder-button"
+                          disabled={openingFolderId === folder.id}
+                          onClick={() => void handleSelectFolder(folder.id)}
+                        >
+                          {folder.name}
+                        </button>
+                        <button
+                          type="button"
+                          className="sidebar-folder-delete-button"
+                          aria-label={`Delete ${folder.name}`}
+                          disabled={deletingFolderId === folder.id}
+                          onClick={() => void handleDeleteFolder(folder.id)}
+                        >
+                          {deletingFolderId === folder.id ? '...' : '×'}
+                        </button>
+                      </div>
                     ))}
                   </div>
                 ) : null}

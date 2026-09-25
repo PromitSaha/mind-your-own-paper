@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
 import { Navigate, useLocation } from 'react-router'
 
+import { LoadingSpinner } from './LoadingSpinner'
 import { fetchCurrentUser } from '../lib/api'
 
 type AuthenticatedRouteProps = {
@@ -58,7 +59,7 @@ export function AuthenticatedRoute({ children }: AuthenticatedRouteProps) {
   if (!isLoaded) {
     return (
       <main className="auth-screen">
-        <p className="muted">Checking authentication...</p>
+        <LoadingSpinner label="Checking authentication..." />
       </main>
     )
   }
@@ -70,7 +71,7 @@ export function AuthenticatedRoute({ children }: AuthenticatedRouteProps) {
   if (syncState === 'idle') {
     return (
       <main className="auth-screen">
-        <p className="muted">Syncing your PaperMind profile...</p>
+        <LoadingSpinner label="Syncing your PaperMind profile..." />
       </main>
     )
   }

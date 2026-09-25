@@ -21,7 +21,8 @@ export function App() {
         >
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard" element={<DashboardPage />} />
-          <Route path="folders" element={<FoldersPage />} />
+          <Route path="folders" element={<Navigate to="/dashboard" replace />} />
+          <Route path="folders/:folderId" element={<FoldersPage />} />
           <Route path="settings" element={<SettingsPage />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Route>
