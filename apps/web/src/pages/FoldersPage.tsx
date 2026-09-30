@@ -33,6 +33,10 @@ function formatFileSize(sizeBytes: number) {
   return `${(sizeBytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
+function formatStatus(status: string) {
+  return status.toLowerCase().replaceAll('_', ' ')
+}
+
 export function FoldersPage() {
   const dispatch = useAppDispatch()
   const { getToken } = useAuth()
@@ -252,18 +256,57 @@ export function FoldersPage() {
   return (
     <section className="folder-simple-page">
       <header className="folder-simple-header">
-        <h1>{selectedFolder.name}</h1>
-        <p>
-          {selectedFolder.files.length} files · {selectedFolder.chats.length}{' '}
-          chats
-        </p>
+        <div className="folder-title-row">
+          <span className="folder-title-icon" aria-hidden="true">
+            □
+          </span>
+          <div>
+            <h1>{selectedFolder.name}</h1>
+            <p>
+              {selectedFolder.files.length} papers ·{' '}
+              {selectedFolder.chats.length} chats
+            </p>
+          </div>
+        </div>
+
+        <div className="folder-header-actions">
+          <button type="button" className="secondary-button">
+            Folder settings
+          </button>
+          <button type="button" className="icon-soft-button" aria-label="More">
+            ⋮
+          </button>
+        </div>
       </header>
+
+      <section className="folder-ask-card" aria-label="Ask about this folder">
+        <div className="folder-ask-heading">
+          <span aria-hidden="true">✦</span>
+          <div>
+            <h2>Ask anything about the papers in this folder</h2>
+            <p>
+              Get answers with citations, compare papers, summarize key
+              findings, and more.
+            </p>
+          </div>
+        </div>
+
+        <div className="folder-ask-input">
+          <input
+            placeholder="Ask a question about your research papers..."
+            disabled
+          />
+          <button type="button" className="primary-button" disabled>
+            Send
+          </button>
+        </div>
+      </section>
 
       <section className="folder-files-board" aria-label="Folder PDF files">
         <div className="folder-section-header">
-          <h2>Files</h2>
+          <h2>Papers ({selectedFolder.files.length})</h2>
           <label className="secondary-button file-upload-button">
-            {isUploadingFiles ? 'Uploading' : 'Upload PDFs'}
+            {isUploadingFiles ? 'Uploading' : 'Upload papers'}
             <input
               type="file"
               accept="application/pdf"
@@ -289,44 +332,58 @@ export function FoldersPage() {
         ) : null}
 
         {selectedFolder.files.length > 0 ? (
-          <div className="folder-file-grid">
-            {selectedFolder.files.slice(0, 11).map((file) => (
-              <button
-                type="button"
-                className="folder-file-tile"
+          <div className="paper-list">
+            {selectedFolder.files.map((file) => (
+              <article
+                className="paper-row-card"
                 key={file.id}
-                disabled={openingFileId === file.id}
-                onClick={() => void handleOpenPdf(file.id)}
               >
-                <span aria-hidden="true">PDF</span>
-                <strong>{file.name}</strong>
-                <small>
-                  {file.status} · {formatFileSize(file.sizeBytes)}
-                </small>
-              </button>
+                <button
+                  type="button"
+                  className="paper-thumbnail"
+                  disabled={openingFileId === file.id}
+                  onClick={() => void handleOpenPdf(file.id)}
+                >
+                  PDF
+                </button>
+
+                <div className="paper-copy">
+                  <h3>{file.name}</h3>
+                  <p>
+                    Uploaded PDF · {formatFileSize(file.sizeBytes)}
+                  </p>
+                </div>
+
+                <div className="paper-meta">
+                  <span className="paper-status">{formatStatus(file.status)}</span>
+                  <button
+                    type="button"
+                    className="secondary-button paper-view-button"
+                    disabled={openingFileId === file.id}
+                    onClick={() => void handleOpenPdf(file.id)}
+                  >
+                    View
+                  </button>
+                </div>
+              </article>
             ))}
-            {selectedFolder.files.length > 11 ? (
-              <button type="button" className="folder-file-tile folder-file-more">
-                More
-              </button>
-            ) : null}
           </div>
         ) : (
           <div className="folder-inline-empty">
-            <p>No PDFs uploaded yet.</p>
+            <p>No papers uploaded yet.</p>
           </div>
         )}
       </section>
 
       <section className="folder-chats-board" aria-label="Folder chats">
         <div className="folder-section-header">
-          <h2>Chats</h2>
+          <h2>Chats ({selectedFolder.chats.length})</h2>
           <button
             type="button"
-            className="secondary-button"
+            className="primary-button"
             onClick={() => dispatch(createChat())}
           >
-            Create chat
+            New chat
           </button>
         </div>
 
@@ -334,8 +391,8 @@ export function FoldersPage() {
           <div className="folder-chat-list-simple">
             {selectedFolder.chats.map((chat) => (
               <button
-                key={chat.id}
                 type="button"
+                key={chat.id}
                 className={
                   chat.id === selectedChat?.id
                     ? 'simple-chat-row simple-chat-row--active'
@@ -344,7 +401,7 @@ export function FoldersPage() {
                 onClick={() => dispatch(selectChat(chat.id))}
               >
                 <span>{chat.title}</span>
-                <small>Uses this folder's PDFs</small>
+                <small>Uses this folder's papers</small>
               </button>
             ))}
           </div>

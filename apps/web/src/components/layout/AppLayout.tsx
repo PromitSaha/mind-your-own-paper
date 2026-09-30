@@ -1,7 +1,7 @@
 import { useAuth, useClerk, useUser } from '@clerk/react'
 import type { CSSProperties, FormEvent, KeyboardEvent, PointerEvent } from 'react'
 import { useState } from 'react'
-import { NavLink, Outlet, useNavigate } from 'react-router'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 
 import { useAppDispatch, useAppSelector } from '../../app/hooks'
 import {
@@ -32,6 +32,8 @@ export function AppLayout() {
   const selectedFolderId = useAppSelector(
     (state) => state.folders.selectedFolderId,
   )
+  const selectedFolder =
+    folders.find((folder) => folder.id === selectedFolderId) ?? null
   const isCreatingFolder = useAppSelector(
     (state) => state.folders.isCreatingFolder,
   )
@@ -39,6 +41,7 @@ export function AppLayout() {
     (state) => state.folders.draftFolderName,
   )
   const navigate = useNavigate()
+  const location = useLocation()
   const { getToken } = useAuth()
   const { signOut } = useClerk()
   const { user } = useUser()
@@ -52,6 +55,21 @@ export function AppLayout() {
   const displayName =
     user?.fullName ?? user?.primaryEmailAddress?.emailAddress ?? 'User'
   const avatarUrl = user?.imageUrl
+  const userInitials = displayName
+    .split(' ')
+    .map((part) => part[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase()
+  const recentChats = folders
+    .flatMap((folder) =>
+      folder.chats.map((chat) => ({
+        ...chat,
+        folderId: folder.id,
+      })),
+    )
+    .slice(-5)
+    .reverse()
   const shellStyle = {
     '--sidebar-width': `${sidebarWidth}px`,
   } as CSSProperties
@@ -265,7 +283,8 @@ export function AppLayout() {
                           disabled={openingFolderId === folder.id}
                           onClick={() => void handleSelectFolder(folder.id)}
                         >
-                          {folder.name}
+                          <span aria-hidden="true">□</span>
+                          <span>{folder.name}</span>
                         </button>
                         <button
                           type="button"
@@ -295,6 +314,27 @@ export function AppLayout() {
             ),
           )}
         </nav>
+
+        <section className="sidebar-recent-chats" aria-label="Recent chats">
+          <h2>Recent Chats</h2>
+          {recentChats.length > 0 ? (
+            <div className="sidebar-recent-chat-list">
+              {recentChats.map((chat) => (
+                <button
+                  key={chat.id}
+                  type="button"
+                  className="sidebar-recent-chat"
+                  onClick={() => navigate(`/folders/${chat.folderId}`)}
+                >
+                  <span aria-hidden="true">○</span>
+                  <span>{chat.title}</span>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <p>No chats yet.</p>
+          )}
+        </section>
 
         <button
           type="button"
@@ -340,12 +380,36 @@ export function AppLayout() {
             >
               <span aria-hidden="true" />
             </button>
-            <span className="topbar-divider" />
-            <p>Read Deeper. Think Further.</p>
+            <nav className="breadcrumb" aria-label="Breadcrumb">
+              {location.pathname.startsWith('/folders/') && selectedFolder ? (
+                <>
+                  <span>Folders</span>
+                  <span aria-hidden="true">›</span>
+                  <strong>{selectedFolder.name}</strong>
+                </>
+              ) : (
+                <strong>Dashboard</strong>
+              )}
+            </nav>
           </div>
 
-          <div className="auth-actions">
-            <span className="workspace-label">Modern research workspace</span>
+          <div className="topbar-tools">
+            <label className="global-search">
+              <span aria-hidden="true">⌕</span>
+              <input
+                placeholder="Search papers, chats, or ask a question..."
+                disabled
+              />
+              <kbd>⌘ K</kbd>
+            </label>
+            <button
+              type="button"
+              className="topbar-avatar"
+              onClick={() => setIsAccountModalOpen(true)}
+              aria-label="Open account menu"
+            >
+              {avatarUrl ? <img src={avatarUrl} alt="" /> : userInitials}
+            </button>
           </div>
         </header>
 
