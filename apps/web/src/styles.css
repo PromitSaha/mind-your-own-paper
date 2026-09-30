@@ -82,7 +82,7 @@ button {
 
 .app-shell {
   display: grid;
-  grid-template-columns: var(--sidebar-width, 220px) 7px minmax(0, 1fr);
+  grid-template-columns: var(--sidebar-width, 264px) 7px minmax(0, 1fr);
   width: 100%;
   min-height: 100vh;
   margin: 0;
@@ -102,10 +102,20 @@ button {
   flex-direction: column;
   min-width: 0;
   overflow: hidden;
-  border-right: 1px solid rgba(30, 30, 30, 0.05);
-  background: rgba(248, 244, 237, 0.88);
-  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.42);
-  backdrop-filter: blur(18px) saturate(1.12);
+  border-right: 0;
+  background:
+    linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.48) 0%,
+      rgba(255, 253, 249, 0.26) 44%,
+      rgba(232, 226, 217, 0.18) 100%
+    ),
+    rgba(255, 253, 249, 0.24);
+  box-shadow:
+    inset 1px 0 0 rgba(255, 255, 255, 0.52),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(30px) saturate(1.45);
+  -webkit-backdrop-filter: blur(30px) saturate(1.45);
 }
 
 .sidebar-resize-handle {
@@ -113,14 +123,14 @@ button {
   z-index: 4;
   width: 7px;
   cursor: col-resize;
-  background: rgba(248, 244, 237, 0.42);
+  background: transparent;
 }
 
 .sidebar-resize-handle::before {
   position: absolute;
-  inset: 0 auto 0 3px;
+  inset: 0 auto 0 0;
   width: 1px;
-  background: rgba(80, 70, 60, 0.08);
+  background: rgba(80, 70, 60, 0.07);
   content: '';
   transition:
     background 160ms ease,
@@ -632,6 +642,8 @@ button {
 }
 
 .content {
+  display: grid;
+  justify-items: center;
   width: 100%;
   padding: 18px clamp(20px, 4vw, 56px) 48px;
 }
@@ -1670,6 +1682,7 @@ button {
 .folder-simple-page {
   display: grid;
   gap: 24px;
+  margin-inline: auto;
 }
 
 .folder-simple-header {
@@ -1801,6 +1814,54 @@ button {
   grid-template-columns: 220px minmax(0, 1fr);
   gap: 16px;
   min-height: 300px;
+}
+
+.folder-chat-list-simple {
+  display: grid;
+  gap: 8px;
+}
+
+.simple-chat-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  min-height: 52px;
+  padding: 0 14px 0 16px;
+  border: 1px solid rgba(80, 70, 60, 0.06);
+  border-radius: 8px;
+  color: var(--ink-soft);
+  background: rgba(255, 253, 249, 0.58);
+  text-align: left;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+.simple-chat-row:hover,
+.simple-chat-row--active {
+  border-color: rgba(99, 102, 241, 0.2);
+  color: var(--ink);
+  background: rgba(255, 253, 249, 0.86);
+  box-shadow: inset 3px 0 0 var(--accent);
+  transform: translateX(2px);
+}
+
+.simple-chat-row span,
+.simple-chat-row small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.simple-chat-row span {
+  font-weight: 750;
+}
+
+.simple-chat-row small {
+  color: var(--muted);
 }
 
 .folder-chat-sidebar,
@@ -2401,7 +2462,7 @@ code {
 
 @media (max-width: 1060px) {
   .app-shell {
-    grid-template-columns: var(--sidebar-width, 220px) 7px minmax(0, 1fr);
+    grid-template-columns: var(--sidebar-width, 264px) 7px minmax(0, 1fr);
     width: 100%;
     margin: 0;
   }

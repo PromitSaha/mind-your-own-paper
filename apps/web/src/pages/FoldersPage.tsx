@@ -330,49 +330,29 @@ export function FoldersPage() {
           </button>
         </div>
 
-        <div className="folder-chat-workspace">
-          <aside className="folder-chat-sidebar">
-            {selectedFolder.chats.length > 0 ? (
-              selectedFolder.chats.map((chat) => (
-                <button
-                  key={chat.id}
-                  type="button"
-                  className={
-                    chat.id === selectedChatId
-                      ? 'simple-chat-button simple-chat-button--active'
-                      : 'simple-chat-button'
-                  }
-                  onClick={() => dispatch(selectChat(chat.id))}
-                >
-                  {chat.title}
-                </button>
-              ))
-            ) : (
-              <p>No chats yet.</p>
-            )}
-          </aside>
-
-          <article className="simple-chat-preview">
-            {selectedChat ? (
-              <>
-                <h3>{selectedChat.title}</h3>
-                <p>
-                  This chat will use the PDFs uploaded to {selectedFolder.name}.
-                </p>
-                <div className="simple-chat-composer">
-                  <input placeholder="Ask about this folder..." />
-                  <button type="button" className="primary-button">
-                    Send
-                  </button>
-                </div>
-              </>
-            ) : (
-              <div className="folder-inline-empty">
-                <p>Create or select a chat to start asking about this folder.</p>
-              </div>
-            )}
-          </article>
-        </div>
+        {selectedFolder.chats.length > 0 ? (
+          <div className="folder-chat-list-simple">
+            {selectedFolder.chats.map((chat) => (
+              <button
+                key={chat.id}
+                type="button"
+                className={
+                  chat.id === selectedChat?.id
+                    ? 'simple-chat-row simple-chat-row--active'
+                    : 'simple-chat-row'
+                }
+                onClick={() => dispatch(selectChat(chat.id))}
+              >
+                <span>{chat.title}</span>
+                <small>Uses this folder's PDFs</small>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="folder-inline-empty">
+            <p>No chats yet.</p>
+          </div>
+        )}
       </section>
     </section>
   )

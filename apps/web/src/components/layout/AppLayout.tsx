@@ -43,7 +43,7 @@ export function AppLayout() {
   const { signOut } = useClerk()
   const { user } = useUser()
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false)
-  const [sidebarWidth, setSidebarWidth] = useState(220)
+  const [sidebarWidth, setSidebarWidth] = useState(264)
   const [folderActionError, setFolderActionError] = useState<string | null>(null)
   const [isSubmittingFolder, setIsSubmittingFolder] = useState(false)
   const [openingFolderId, setOpeningFolderId] = useState<string | null>(null)
@@ -155,7 +155,7 @@ export function AppLayout() {
 
     function handlePointerMove(moveEvent: globalThis.PointerEvent) {
       const nextWidth = startWidth + moveEvent.clientX - startX
-      setSidebarWidth(Math.min(Math.max(nextWidth, 184), 340))
+      setSidebarWidth(Math.min(Math.max(nextWidth, 220), 420))
     }
 
     function handlePointerUp() {
@@ -170,12 +170,12 @@ export function AppLayout() {
   function handleResizeKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     if (event.key === 'ArrowLeft') {
       event.preventDefault()
-      setSidebarWidth((currentWidth) => Math.max(currentWidth - 12, 184))
+      setSidebarWidth((currentWidth) => Math.max(currentWidth - 12, 220))
     }
 
     if (event.key === 'ArrowRight') {
       event.preventDefault()
-      setSidebarWidth((currentWidth) => Math.min(currentWidth + 12, 340))
+      setSidebarWidth((currentWidth) => Math.min(currentWidth + 12, 420))
     }
   }
 
@@ -321,8 +321,8 @@ export function AppLayout() {
         role="separator"
         aria-label="Resize sidebar"
         aria-orientation="vertical"
-        aria-valuemin={184}
-        aria-valuemax={340}
+        aria-valuemin={220}
+        aria-valuemax={420}
         aria-valuenow={sidebarWidth}
         tabIndex={0}
         onPointerDown={handleResizeStart}
