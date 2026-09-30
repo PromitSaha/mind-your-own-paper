@@ -1,8 +1,28 @@
+from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from papermind.auth.schemas import CurrentUser
 from papermind.models import User
+
+
+def get_user_for_current_auth(session: Session, current_user: CurrentUser) -> User:
+    user = session.scalar(
+        select(User).where(
+            User.clerk_user_id == current_user.clerk_user_id,
+            User.is_deleted.is_(False),
+        )
+    )
+    if user is not None:
+        return user
+
+    raise HTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        detail=(
+            "User profile has not been synced. "
+            "Call /auth/me before continuing."
+        ),
+    )
 
 
 def sync_user_from_auth(session: Session, current_user: CurrentUser) -> User:

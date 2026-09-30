@@ -1,8 +1,12 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
 
+import type { FileStatus } from '../../lib/api'
+
 type PaperFile = {
   id: string
   name: string
+  status: FileStatus
+  sizeBytes: number
 }
 
 type Chat = {
@@ -67,6 +71,88 @@ const foldersSlice = createSlice({
       state.isCreatingFolder = false
       state.draftFolderName = ''
     },
+    folderCreated(
+      state,
+      action: PayloadAction<{
+        id: string
+        name: string
+      }>,
+    ) {
+      const folder: Folder = {
+        id: action.payload.id,
+        name: action.payload.name,
+        files: [],
+        chats: [],
+      }
+
+      state.folders.push(folder)
+      state.selectedFolderId = folder.id
+      state.selectedChatId = null
+      state.isCreatingFolder = false
+      state.draftFolderName = ''
+    },
+    foldersLoaded(
+      state,
+      action: PayloadAction<
+        {
+          id: string
+          name: string
+        }[]
+      >,
+    ) {
+      const existingFoldersById = new Map(
+        state.folders.map((folder) => [folder.id, folder]),
+      )
+      state.folders = action.payload.map((folder) => ({
+        id: folder.id,
+        name: folder.name,
+        files: existingFoldersById.get(folder.id)?.files ?? [],
+        chats: existingFoldersById.get(folder.id)?.chats ?? [],
+      }))
+
+      if (
+        state.selectedFolderId &&
+        !state.folders.some((folder) => folder.id === state.selectedFolderId)
+      ) {
+        state.selectedFolderId = null
+        state.selectedChatId = null
+      }
+    },
+    folderFetched(
+      state,
+      action: PayloadAction<{
+        id: string
+        name: string
+      }>,
+    ) {
+      const existingFolder = state.folders.find(
+        (folder) => folder.id === action.payload.id,
+      )
+
+      if (existingFolder) {
+        existingFolder.name = action.payload.name
+      } else {
+        state.folders.push({
+          id: action.payload.id,
+          name: action.payload.name,
+          files: [],
+          chats: [],
+        })
+      }
+
+      state.selectedFolderId = action.payload.id
+      state.selectedChatId = null
+    },
+    deleteFolder(state, action: PayloadAction<string>) {
+      state.folders = state.folders.filter(
+        (folder) => folder.id !== action.payload,
+      )
+
+      if (state.selectedFolderId === action.payload) {
+        state.selectedFolderId = null
+        state.selectedChatId = null
+      }
+    },
     selectFolder(state, action: PayloadAction<string>) {
       state.selectedFolderId = action.payload
       state.selectedChatId = null
@@ -90,7 +176,15 @@ const foldersSlice = createSlice({
     selectChat(state, action: PayloadAction<string>) {
       state.selectedChatId = action.payload
     },
-    addFilesToSelectedFolder(state, action: PayloadAction<string[]>) {
+    addUploadedFileToSelectedFolder(
+      state,
+      action: PayloadAction<{
+        id: string
+        name: string
+        status: FileStatus
+        sizeBytes: number
+      }>,
+    ) {
       const folder = state.folders.find(
         (candidate) => candidate.id === state.selectedFolderId,
       )
@@ -98,21 +192,51 @@ const foldersSlice = createSlice({
         return
       }
 
-      folder.files.push(
-        ...action.payload.map((name) => ({
-          id: `file-${Date.now()}-${name}`,
-          name,
-        })),
+      const existingFile = folder.files.find(
+        (file) => file.id === action.payload.id,
       )
+      if (existingFile) {
+        existingFile.name = action.payload.name
+        existingFile.status = action.payload.status
+        return
+      }
+
+      folder.files.push(action.payload)
+    },
+    folderFilesLoaded(
+      state,
+      action: PayloadAction<{
+        folderId: string
+        files: {
+          id: string
+          name: string
+          status: FileStatus
+          sizeBytes: number
+        }[]
+      }>,
+    ) {
+      const folder = state.folders.find(
+        (candidate) => candidate.id === action.payload.folderId,
+      )
+      if (!folder) {
+        return
+      }
+
+      folder.files = action.payload.files
     },
   },
 })
 
 export const {
-  addFilesToSelectedFolder,
+  addUploadedFileToSelectedFolder,
   cancelCreatingFolder,
   createChat,
   createFolder,
+  deleteFolder,
+  folderCreated,
+  folderFetched,
+  folderFilesLoaded,
+  foldersLoaded,
   selectChat,
   selectFolder,
   setDraftFolderName,

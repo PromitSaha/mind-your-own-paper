@@ -24,6 +24,7 @@ if TYPE_CHECKING:
 
 
 class FileStatus(enum.StrEnum):
+    PENDING_UPLOAD = "PENDING_UPLOAD"
     UPLOADED = "UPLOADED"
     PROCESSING = "PROCESSING"
     READY = "READY"
@@ -49,8 +50,8 @@ class File(Base):
     size_bytes: Mapped[int] = mapped_column(BigInteger)
     status: Mapped[FileStatus] = mapped_column(
         Enum(FileStatus, name="file_status"),
-        default=FileStatus.UPLOADED,
-        server_default=FileStatus.UPLOADED.value,
+        default=FileStatus.PENDING_UPLOAD,
+        server_default=FileStatus.PENDING_UPLOAD.value,
     )
     processing_error: Mapped[str | None] = mapped_column(Text)
     is_deleted: Mapped[bool] = mapped_column(

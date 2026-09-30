@@ -9,14 +9,29 @@ import {
   addUploadedFileToSelectedFolder,
   createChat,
   folderFetched,
+  folderFilesLoaded,
   selectChat,
 } from '../features/folders/foldersSlice'
 import {
   completeFileUploadRequest,
   fetchFolderByIdRequest,
+  fetchFolderFilesRequest,
+  fetchFileDownloadUrlRequest,
   initiateFileUploadRequest,
   uploadFileToS3,
 } from '../lib/api'
+
+function formatFileSize(sizeBytes: number) {
+  if (sizeBytes < 1024) {
+    return `${sizeBytes} B`
+  }
+
+  if (sizeBytes < 1024 * 1024) {
+    return `${(sizeBytes / 1024).toFixed(1)} KB`
+  }
+
+  return `${(sizeBytes / (1024 * 1024)).toFixed(1)} MB`
+}
 
 export function FoldersPage() {
   const dispatch = useAppDispatch()
@@ -27,7 +42,9 @@ export function FoldersPage() {
   )
   const [isLoadingFolder, setIsLoadingFolder] = useState(true)
   const [folderLoadError, setFolderLoadError] = useState<string | null>(null)
+  const [fileLoadError, setFileLoadError] = useState<string | null>(null)
   const [isUploadingFiles, setIsUploadingFiles] = useState(false)
+  const [openingFileId, setOpeningFileId] = useState<string | null>(null)
   const [uploadMessage, setUploadMessage] = useState<string | null>(null)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const selectedFolder =
@@ -46,6 +63,7 @@ export function FoldersPage() {
     async function loadFolder() {
       setIsLoadingFolder(true)
       setFolderLoadError(null)
+      setFileLoadError(null)
 
       try {
         const token = await getToken()
@@ -54,15 +72,28 @@ export function FoldersPage() {
         }
 
         const folder = await fetchFolderByIdRequest(token, routeFolderId)
+        const files = await fetchFolderFilesRequest(token, routeFolderId)
 
         if (!isCancelled) {
           dispatch(folderFetched({ id: folder.id, name: folder.name }))
+          dispatch(
+            folderFilesLoaded({
+              folderId: folder.id,
+              files: files.map((file) => ({
+                id: file.id,
+                name: file.original_filename,
+                status: file.status,
+                sizeBytes: file.size_bytes,
+              })),
+            }),
+          )
         }
       } catch (error) {
         if (!isCancelled) {
           setFolderLoadError(
             error instanceof Error ? error.message : 'Unable to load folder.',
           )
+          setFileLoadError('Unable to load files for this folder.')
         }
       } finally {
         if (!isCancelled) {
@@ -127,6 +158,7 @@ export function FoldersPage() {
             id: completedFile.file_id,
             name: completedFile.filename,
             status: completedFile.status,
+            sizeBytes: file.size,
           }),
         )
       }
@@ -139,6 +171,42 @@ export function FoldersPage() {
       )
     } finally {
       setIsUploadingFiles(false)
+    }
+  }
+
+  async function handleOpenPdf(fileId: string) {
+    if (openingFileId) {
+      return
+    }
+
+    const pdfWindow = window.open('', '_blank')
+    if (!pdfWindow) {
+      setUploadError('Your browser blocked the PDF window.')
+      return
+    }
+
+    pdfWindow.opener = null
+    setOpeningFileId(fileId)
+    setUploadError(null)
+
+    try {
+      const token = await getToken()
+      if (!token) {
+        throw new Error('Clerk did not return a session token.')
+      }
+
+      const { download_url: downloadUrl } = await fetchFileDownloadUrlRequest(
+        token,
+        fileId,
+      )
+      pdfWindow.location.href = downloadUrl
+    } catch (error) {
+      pdfWindow.close()
+      setUploadError(
+        error instanceof Error ? error.message : 'Unable to open PDF.',
+      )
+    } finally {
+      setOpeningFileId(null)
     }
   }
 
@@ -216,14 +284,26 @@ export function FoldersPage() {
           <p className="folder-upload-error">{uploadError}</p>
         ) : null}
 
+        {fileLoadError ? (
+          <p className="folder-upload-error">{fileLoadError}</p>
+        ) : null}
+
         {selectedFolder.files.length > 0 ? (
           <div className="folder-file-grid">
             {selectedFolder.files.slice(0, 11).map((file) => (
-              <div className="folder-file-tile" key={file.id}>
+              <button
+                type="button"
+                className="folder-file-tile"
+                key={file.id}
+                disabled={openingFileId === file.id}
+                onClick={() => void handleOpenPdf(file.id)}
+              >
                 <span aria-hidden="true">PDF</span>
                 <strong>{file.name}</strong>
-                <small>{file.status}</small>
-              </div>
+                <small>
+                  {file.status} · {formatFileSize(file.sizeBytes)}
+                </small>
+              </button>
             ))}
             {selectedFolder.files.length > 11 ? (
               <button type="button" className="folder-file-tile folder-file-more">

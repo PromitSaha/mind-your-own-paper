@@ -112,3 +112,197 @@ def test_create_folder_requires_authentication() -> None:
     response = client.post("/folders", json={"name": "Private Folder"})
 
     assert response.status_code == 401
+
+
+def test_list_folders_returns_owned_non_deleted_folders() -> None:
+    client, testing_session = build_test_client()
+    user_id = sync_test_user(client)
+
+    with testing_session() as session:
+        other_user = User(
+            clerk_user_id="other_user",
+            email="other@example.com",
+        )
+        owned_folder = Folder(owner_id=UUID(user_id), name="Owned Folder")
+        deleted_folder = Folder(
+            owner_id=UUID(user_id),
+            name="Deleted Folder",
+            is_deleted=True,
+        )
+        other_folder = Folder(owner=other_user, name="Other Folder")
+        session.add_all([owned_folder, deleted_folder, other_folder])
+        session.commit()
+        owned_folder_id = owned_folder.id
+
+    response = client.get("/folders")
+
+    assert response.status_code == 200
+    assert response.json() == [
+        {
+            "id": str(owned_folder_id),
+            "owner_id": user_id,
+            "name": "Owned Folder",
+            "is_deleted": False,
+            "created_at": response.json()[0]["created_at"],
+            "updated_at": response.json()[0]["updated_at"],
+        }
+    ]
+
+
+def test_get_folder_returns_owned_folder() -> None:
+    client, testing_session = build_test_client()
+    user_id = sync_test_user(client)
+
+    with testing_session() as session:
+        folder = Folder(owner_id=UUID(user_id), name="Owned Folder")
+        session.add(folder)
+        session.commit()
+        folder_id = folder.id
+
+    response = client.get(f"/folders/{folder_id}")
+
+    assert response.status_code == 200
+    assert response.json()["id"] == str(folder_id)
+    assert response.json()["name"] == "Owned Folder"
+
+
+def test_get_folder_rejects_deleted_folder() -> None:
+    client, testing_session = build_test_client()
+    user_id = sync_test_user(client)
+
+    with testing_session() as session:
+        folder = Folder(
+            owner_id=UUID(user_id),
+            name="Deleted Folder",
+            is_deleted=True,
+        )
+        session.add(folder)
+        session.commit()
+        folder_id = folder.id
+
+    response = client.get(f"/folders/{folder_id}")
+
+    assert response.status_code == 404
+
+
+def test_get_folder_rejects_another_users_folder() -> None:
+    client, testing_session = build_test_client()
+    sync_test_user(client)
+
+    with testing_session() as session:
+        other_user = User(
+            clerk_user_id="other_user",
+            email="other@example.com",
+        )
+        folder = Folder(owner=other_user, name="Private Folder")
+        session.add(folder)
+        session.commit()
+        folder_id = folder.id
+
+    response = client.get(f"/folders/{folder_id}")
+
+    assert response.status_code == 404
+
+
+def test_update_folder_renames_owned_folder() -> None:
+    client, testing_session = build_test_client()
+    user_id = sync_test_user(client)
+
+    with testing_session() as session:
+        folder = Folder(owner_id=UUID(user_id), name="Old Name")
+        session.add(folder)
+        session.commit()
+        folder_id = folder.id
+
+    response = client.patch(f"/folders/{folder_id}", json={"name": "New Name"})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["id"] == str(folder_id)
+    assert body["name"] == "New Name"
+    assert body["is_deleted"] is False
+
+    with testing_session() as session:
+        folder = session.get(Folder, folder_id)
+
+    assert folder is not None
+    assert folder.name == "New Name"
+
+
+def test_update_folder_rejects_another_users_folder() -> None:
+    client, testing_session = build_test_client()
+    sync_test_user(client)
+
+    with testing_session() as session:
+        other_user = User(
+            clerk_user_id="other_user",
+            email="other@example.com",
+        )
+        folder = Folder(owner=other_user, name="Private Folder")
+        session.add(folder)
+        session.commit()
+        folder_id = folder.id
+
+    response = client.patch(f"/folders/{folder_id}", json={"name": "New Name"})
+
+    assert response.status_code == 404
+
+
+def test_delete_folder_soft_deletes_owned_folder() -> None:
+    client, testing_session = build_test_client()
+    user_id = sync_test_user(client)
+
+    with testing_session() as session:
+        folder = Folder(owner_id=UUID(user_id), name="Folder")
+        session.add(folder)
+        session.commit()
+        folder_id = folder.id
+
+    response = client.delete(f"/folders/{folder_id}")
+
+    assert response.status_code == 204
+    assert response.content == b""
+
+    with testing_session() as session:
+        folder = session.get(Folder, folder_id)
+
+    assert folder is not None
+    assert folder.is_deleted is True
+
+
+def test_delete_folder_rejects_already_deleted_folder() -> None:
+    client, testing_session = build_test_client()
+    user_id = sync_test_user(client)
+
+    with testing_session() as session:
+        folder = Folder(
+            owner_id=UUID(user_id),
+            name="Folder",
+            is_deleted=True,
+        )
+        session.add(folder)
+        session.commit()
+        folder_id = folder.id
+
+    response = client.delete(f"/folders/{folder_id}")
+
+    assert response.status_code == 404
+
+
+def test_delete_folder_rejects_another_users_folder() -> None:
+    client, testing_session = build_test_client()
+    sync_test_user(client)
+
+    with testing_session() as session:
+        other_user = User(
+            clerk_user_id="other_user",
+            email="other@example.com",
+        )
+        folder = Folder(owner=other_user, name="Private Folder")
+        session.add(folder)
+        session.commit()
+        folder_id = folder.id
+
+    response = client.delete(f"/folders/{folder_id}")
+
+    assert response.status_code == 404

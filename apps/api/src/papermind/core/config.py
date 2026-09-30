@@ -17,6 +17,10 @@ class Settings(BaseSettings):
     environment: str = "development"
     api_title: str = "PaperMind API"
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
+    aws_region: str = "us-east-2"
+    s3_bucket: str | None = None
+    aws_profile: str | None = Field(default=None, validation_alias="AWS_PROFILE")
+    max_upload_size_bytes: int = 50 * 1024 * 1024
     clerk_secret_key: str | None = Field(
         default=None,
         validation_alias="CLERK_SECRET_KEY",

@@ -14,6 +14,10 @@ class FolderCreate(BaseModel):
     name: FolderName
 
 
+class FolderUpdate(BaseModel):
+    name: FolderName
+
+
 class FolderRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
